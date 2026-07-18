@@ -1,0 +1,18 @@
+summary: the od CLI wrapper is installed on $PATH inside the workshop
+
+prepare: |
+  envsubst '${BASE}' <workshop.yaml.in >workshop.yaml
+  workshop launch
+
+restore: |
+  workshop remove || true
+
+execute: |
+  # setup-base writes the wrapper to /usr/local/bin/od, which is on the
+  # default PATH (no login shell required).
+  workshop exec -- which od | MATCH "/usr/local/bin/od$"
+  workshop exec -- test -x /usr/local/bin/od
+
+debug: |
+  workshop exec -- ls -l /usr/local/bin/od || true
+  workshop exec -- printenv PATH || true

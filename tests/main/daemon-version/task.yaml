@@ -1,0 +1,26 @@
+summary: the daemon serves /api/version and reports the expected version
+
+prepare: |
+  envsubst '${BASE}' <workshop.yaml.in >workshop.yaml
+  workshop launch
+
+restore: |
+  workshop remove || true
+
+execute: |
+  # End-to-end proof: `od version` fetches /api/version from the running
+  # daemon (default 127.0.0.1:7456) and prints the served version. A match
+  # against VERSION proves the daemon built, loaded its native modules
+  # (better-sqlite3, sharp), is listening on the tunnel port, and reports the
+  # packaged version. Escape dots so MATCH treats the version literally.
+  EXPECTED_REGEX="${EXPECTED_VERSION//./\\.}"
+  workshop exec -- od version | MATCH "$EXPECTED_REGEX"
+
+  # The health endpoint the check-health hook depends on also reports it.
+  workshop exec -- curl -fsS http://127.0.0.1:7456/api/health | MATCH "\"ok\":true"
+  workshop exec -- curl -fsS http://127.0.0.1:7456/api/health | MATCH "$EXPECTED_REGEX"
+
+debug: |
+  workshop exec -- od version || true
+  workshop exec -- curl -fsS http://127.0.0.1:7456/api/health || true
+  workshop exec -- systemctl --user status open-design || true

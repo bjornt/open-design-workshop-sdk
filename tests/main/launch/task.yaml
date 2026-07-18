@@ -1,0 +1,18 @@
+summary: Launch a workshop with the open-design SDK and verify setup
+
+prepare: |
+  envsubst '${BASE}' <workshop.yaml.in >workshop.yaml
+  workshop launch
+
+restore: |
+  workshop remove || true
+
+execute: |
+  # `workshop launch` blocks until check-health reports okay, which for this
+  # SDK means the systemd service is active AND the daemon answered
+  # /api/health. A returned launch therefore already proves the daemon is
+  # serving; prove the workshop is interactable as a belt-and-braces check.
+  workshop exec -- true
+
+debug: |
+  workshop tasks

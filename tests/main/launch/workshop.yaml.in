@@ -1,0 +1,4 @@
+name: test-open-design
+base: ${BASE}
+sdks:
+  - name: try-open-design

@@ -1,0 +1,18 @@
+#!/usr/bin/bash
+# Runs as root on launch and refresh. Installs the daemon's runtime OS
+# dependencies and the `od` CLI wrapper so users (and daemon-spawned agents)
+# can drive Open Design from the shell without putting the bundled Node.js on
+# the global PATH.
+set -eu
+
+# Runtime dependencies the daemon shells out to: poppler-utils for PDF/PPTX
+# export, git for repo-backed plugin and publish flows, curl for the health
+# probe. Mirrors deploy/Dockerfile's runtime stage (minus container-only tini).
+apt-get update
+eatmydata apt-get install curl git poppler-utils
+
+cat <<EOF >/usr/local/bin/od
+#!/usr/bin/bash
+exec /opt/node/bin/node /opt/open-design/apps/daemon/dist/cli.js "\$@"
+EOF
+chmod 0755 /usr/local/bin/od

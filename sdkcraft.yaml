@@ -1,0 +1,92 @@
+name: open-design
+adopt-info: open-design
+build-base: ubuntu@24.04
+summary: The open-source Claude Design alternative, headless in a workshop
+description: |
+  This SDK runs Open Design (nexu-io) as a headless daemon inside a workshop.
+  The daemon serves the web UI and the /api surface, exposes an MCP server, and
+  turns the code-agent CLIs already on your PATH (OpenCode, Claude Code, Codex,
+  Gemini, and 20+ more) into a design engine for prototypes, dashboards, decks,
+  images, and video. Projects, artifacts, the SQLite store, and configuration
+  are persisted on the host so your work survives workshop updates.
+license: Apache-2.0
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+plugs:
+  open-design-data:
+    interface: mount
+    workshop-target: /home/workshop/.local/share/open-design
+
+slots:
+  open-design-server:
+    interface: tunnel
+    endpoint: 7456
+
+parts:
+  open-design:
+    plugin: nil
+    build-packages:
+      - ca-certificates
+      - curl
+      - g++
+      - git
+      - make
+      - pkg-config
+      - python3
+      - xz-utils
+    override-pull: |
+      VERSION=$(cat "$CRAFT_PROJECT_DIR/VERSION")
+      craftctl set version="$VERSION"
+      git clone --depth 1 --branch "open-design-v${VERSION}" \
+        https://github.com/nexu-io/open-design.git "$CRAFT_PART_SRC"
+    override-build: |
+      set -eu
+
+      ROOT="$CRAFT_PART_SRC"
+      APP="$CRAFT_PART_INSTALL/opt/open-design"
+      NODE_DIR="$CRAFT_PART_INSTALL/opt/node"
+
+      # Pinned Node.js 24 (Krypton LTS) — used for the build and bundled as the
+      # runtime so the SDK does not depend on the workshop base's node version.
+      NODE_VERSION=24.18.0
+      curl -fL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+        -o /tmp/node.tar.xz
+      mkdir -p "$NODE_DIR"
+      tar -xJf /tmp/node.tar.xz -C "$NODE_DIR" --strip-components=1
+      rm -f /tmp/node.tar.xz
+      export PATH="$NODE_DIR/bin:$PATH"
+
+      # Build the monorepo the same way deploy/Dockerfile does.
+      cd "$ROOT"
+      export CI=true
+      corepack enable
+      corepack prepare pnpm@10.33.2 --activate
+      pnpm install --frozen-lockfile
+      pnpm --filter @open-design/daemon build
+      pnpm --filter @open-design/web build
+      # pnpm refuses/mis-handles a deploy target outside the workspace, so
+      # deploy inside $ROOT (as deploy/Dockerfile does with /app/deploy/daemon)
+      # and copy the self-contained result into the SDK tree during assembly.
+      pnpm --filter @open-design/daemon deploy --legacy --prod "$ROOT/deploy/daemon"
+
+      # Assemble the runtime tree (app root == $APP; the daemon resolves the
+      # web export and content directories relative to its working directory).
+      mkdir -p "$APP/apps/web" "$APP/assets" "$APP/plugins"
+      cp -r "$ROOT/deploy/daemon"         "$APP/apps/daemon"
+      cp -r "$ROOT/apps/web/out"          "$APP/apps/web/out"
+      cp -r "$ROOT/skills"                "$APP/skills"
+      cp -r "$ROOT/design-systems"        "$APP/design-systems"
+      cp -r "$ROOT/craft"                 "$APP/craft"
+      cp -r "$ROOT/prompt-templates"      "$APP/prompt-templates"
+      cp -r "$ROOT/assets/frames"         "$APP/assets/frames"
+      cp -r "$ROOT/assets/community-pets" "$APP/assets/community-pets"
+      cp -r "$ROOT/plugins/_official"     "$APP/plugins/_official"
+
+  services:
+    plugin: dump
+    source: services
+    source-type: local

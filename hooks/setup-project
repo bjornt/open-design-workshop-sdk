@@ -1,0 +1,11 @@
+#!/usr/bin/bash
+# Runs as the workshop user after interfaces are connected. Ensures the
+# persisted data directory exists, then enables the daemon as a user service.
+set -eu
+
+mkdir -p "$HOME/.local/share/open-design"
+
+install -D --mode=644 --target-directory "$HOME/.config/systemd/user" \
+    "$SDK/open-design.service"
+systemctl --user daemon-reload
+systemctl --user enable --now open-design
