@@ -13,6 +13,6 @@ eatmydata apt-get install curl git poppler-utils
 
 cat <<EOF >/usr/local/bin/od
 #!/usr/bin/bash
-exec /opt/node/bin/node /opt/open-design/apps/daemon/dist/cli.js "\$@"
+exec "$SDK/opt/node/bin/node" "$SDK/opt/open-design/apps/daemon/dist/cli.js" "\$@"
 EOF
 chmod 0755 /usr/local/bin/od

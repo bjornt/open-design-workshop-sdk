@@ -85,8 +85,3 @@ parts:
       cp -r "$ROOT/assets/frames"         "$APP/assets/frames"
       cp -r "$ROOT/assets/community-pets" "$APP/assets/community-pets"
       cp -r "$ROOT/plugins/_official"     "$APP/plugins/_official"
-
-  services:
-    plugin: dump
-    source: services
-    source-type: local

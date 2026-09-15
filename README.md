@@ -61,6 +61,38 @@ xdg-open http://127.0.0.1:7456   # or open the URL in a browser
 Pick a runtime, a design template, and a design system, type a brief, and the
 agent streams artifacts into the sandboxed preview.
 
+Projects are created under the persisted data directory
+(`$HOME/.local/share/open-design/project`, i.e. inside the `open-design-data`
+mount) by default, so adding this SDK to a workshop never touches `/project`
+on its own. The SDK seeds this as the default project location (in the
+daemon's `app-config.json`) so "New project" creates its working directory
+automatically; a headless workshop has no display server, so the daemon's
+native folder picker cannot open.
+
+To version-control your design work alongside the repo instead, commit a
+`.open-design-location` file at the root of `/project`. Its first
+non-comment line is the location: an absolute path, or a name/relative path
+resolved under `/project`.
+
+```
+# /project/.open-design-location
+designs
+```
+
+This is the only per-project knob a workshop hook can read — the workshop
+definition schema passes no config to SDK hooks — and it is picked up on the
+next `workshop refresh`. You can also add or change locations at runtime in
+Settings → Project locations.
+
+On first launch the SDK also seeds a **starter project** so the studio is
+usable without signing in: once the daemon is healthy it imports the default
+project location as a project and "links local code" — attaching the repo root
+`/project` as a read-only linked directory so the agent can reference the
+surrounding codebase. This is local and signed-out; no Open Design Cloud (AMR)
+account is involved. It runs once per persisted data volume (guarded by a
+marker in the data directory), so deleting the project in the UI will not
+resurrect it on the next `workshop refresh`.
+
 ### Drive it from the shell
 
 Every capability is also reachable through the `od` CLI:
